@@ -1,0 +1,6 @@
+BUILD_PLAN.txt
+node_modules/
+.env
+.env.local
+.env.*.local
+.DS_Store
