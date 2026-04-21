@@ -1,6 +1,25 @@
 BUILD_PLAN.txt
+
+# Dependencies
 node_modules/
+
+# Environment
 .env
 .env.local
 .env.*.local
+
+# Build outputs
+dist/
+.next/
+out/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
 .DS_Store
+
+# Docker volumes (local dev data)
+postgres_data/
+minio_data/

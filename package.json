@@ -1,0 +1,22 @@
+{
+  "name": "gadget-lab-store",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "gadget-lab",
+    "gadget-lab-api",
+    "gadget-lab-admin"
+  ],
+  "scripts": {
+    "dev": "docker-compose up",
+    "build": "docker-compose up --build",
+    "down": "docker-compose down",
+    "down:volumes": "docker-compose down -v",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "prettier": "^3.5.3",
+    "typescript": "^5"
+  }
+}
