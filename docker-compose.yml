@@ -31,10 +31,11 @@ services:
     volumes:
       - minio_data:/data
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:9000/minio/health/live || exit 1"]
+      test: ["CMD", "mc", "ready", "local"]
       interval: 5s
       timeout: 5s
       retries: 10
+      start_period: 10s
 
   createbuckets:
     image: minio/mc
@@ -43,7 +44,9 @@ services:
         condition: service_healthy
     entrypoint: >
       /bin/sh -c "
-        mc alias set local http://minio:9000 minioadmin minioadmin &&
+        until mc alias set local http://minio:9000 minioadmin minioadmin; do
+          echo 'Waiting for MinIO...'; sleep 2;
+        done &&
         mc mb --ignore-existing local/gadgetlab-images &&
         mc anonymous set public local/gadgetlab-images &&
         echo 'MinIO bucket ready.'
