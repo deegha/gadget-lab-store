@@ -1,0 +1,210 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Enums ─────────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  CUSTOMER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum CouponType {
+  PERCENT
+  FIXED
+}
+
+// ── Users ─────────────────────────────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  role         UserRole @default(CUSTOMER)
+  name         String
+  phone        String?
+  addresses    Json     @default("[]")
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// ── Catalog ───────────────────────────────────────────────────────────────────
+
+model Category {
+  id          String     @id @default(cuid())
+  name        String
+  slug        String     @unique
+  description String     @default("")
+  imageUrl    String?
+  parentId    String?
+  parent      Category?  @relation("CategoryParent", fields: [parentId], references: [id])
+  children    Category[] @relation("CategoryParent")
+  products    Product[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Product {
+  id             String           @id @default(cuid())
+  slug           String           @unique
+  name           String
+  description    String           @default("")
+  series         String           @default("")
+  price          Float
+  compareAtPrice Float?
+  stock          Int              @default(0)
+  sku            String           @default("")
+  categoryId     String
+  category       Category         @relation(fields: [categoryId], references: [id])
+  images         Json             @default("[]")
+  specs          Json             @default("[]")
+  detailedSpecs  Json             @default("[]")
+  badges         Json             @default("[]")
+  isFeatured     Boolean          @default(false)
+  isActive       Boolean          @default(true)
+  averageRating  Float            @default(0)
+  reviewCount    Int              @default(0)
+  variants       ProductVariant[]
+  reviews        Review[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+}
+
+model ProductVariant {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name      String
+  options   Json     @default("{}")
+  price     Float
+  stock     Int      @default(0)
+  sku       String   @default("")
+  createdAt DateTime @default(now())
+}
+
+// ── Reviews ───────────────────────────────────────────────────────────────────
+
+model Review {
+  id                 String   @id @default(cuid())
+  productId          String
+  product            Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  orderId            String?
+  reviewerEmail      String
+  reviewerName       String   @default("")
+  rating             Int
+  title              String   @default("")
+  body               String
+  isVerifiedPurchase Boolean  @default(false)
+  createdAt          DateTime @default(now())
+
+  @@index([productId])
+}
+
+// ── Cart ──────────────────────────────────────────────────────────────────────
+
+model Cart {
+  id         String   @id @default(cuid())
+  sessionId  String   @unique
+  items      Json     @default("[]")
+  couponCode String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// ── Orders ────────────────────────────────────────────────────────────────────
+
+model Order {
+  id              String               @id @default(cuid())
+  customerEmail   String
+  customerName    String
+  status          OrderStatus          @default(PENDING)
+  items           Json
+  shippingAddress Json
+  billingAddress  Json?
+  subtotal        Float
+  discount        Float                @default(0)
+  shippingCost    Float                @default(0)
+  tax             Float                @default(0)
+  total           Float
+  couponCode      String?
+  trackingNumber  String?
+  notes           String?
+  statusHistory   OrderStatusHistory[]
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  @@index([customerEmail])
+  @@index([status])
+}
+
+model OrderStatusHistory {
+  id        String      @id @default(cuid())
+  orderId   String
+  order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status    OrderStatus
+  note      String?
+  createdAt DateTime    @default(now())
+
+  @@index([orderId])
+}
+
+// ── Coupons ───────────────────────────────────────────────────────────────────
+
+model Coupon {
+  id                    String     @id @default(cuid())
+  code                  String     @unique
+  type                  CouponType
+  value                 Float
+  minOrderAmount        Float?
+  maxUses               Int?
+  usedCount             Int        @default(0)
+  applicableProductIds  Json       @default("[]")
+  applicableCategoryIds Json       @default("[]")
+  expiresAt             DateTime?
+  isActive              Boolean    @default(true)
+  createdAt             DateTime   @default(now())
+  updatedAt             DateTime   @updatedAt
+}
+
+// ── Blog ──────────────────────────────────────────────────────────────────────
+
+model BlogPost {
+  id          String    @id @default(cuid())
+  slug        String    @unique
+  title       String
+  filePath    String
+  excerpt     String    @default("")
+  coverImage  String?
+  isPublished Boolean   @default(false)
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+// ── Email log ─────────────────────────────────────────────────────────────────
+
+model EmailLog {
+  id        String   @id @default(cuid())
+  to        String
+  subject   String
+  type      String
+  status    String
+  error     String?
+  createdAt DateTime @default(now())
+}

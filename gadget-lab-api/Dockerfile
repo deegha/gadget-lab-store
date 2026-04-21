@@ -1,7 +1,7 @@
 FROM node:22-alpine AS base
 WORKDIR /app
 
-# ── Install all workspace dependencies ────────────────────────────────────────
+# ── Install dependencies + generate Prisma client ─────────────────────────────
 FROM base AS deps
 COPY package.json package-lock.json* ./
 COPY packages/types/package.json ./packages/types/
@@ -9,15 +9,20 @@ COPY gadget-lab-api/package.json ./gadget-lab-api/
 COPY gadget-lab/package.json ./gadget-lab/
 COPY gadget-lab-admin/package.json ./gadget-lab-admin/
 RUN npm install
+# Generate Prisma client (requires the schema to be present)
+COPY gadget-lab-api/prisma ./gadget-lab-api/prisma
+WORKDIR /app/gadget-lab-api
+RUN npx prisma generate
+WORKDIR /app
 
-# ── Development: source is mounted via docker-compose volume ──────────────────
+# ── Development: src is mounted via docker-compose volume ─────────────────────
 FROM base AS dev
 COPY --from=deps /app/node_modules ./node_modules
 COPY packages ./packages
 COPY gadget-lab-api ./gadget-lab-api
 WORKDIR /app/gadget-lab-api
 EXPOSE 3001
-CMD ["npx", "tsx", "watch", "src/index.ts"]
+CMD ["sh", "docker-entrypoint.sh"]
 
 # ── Build ─────────────────────────────────────────────────────────────────────
 FROM base AS builder
@@ -34,6 +39,7 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=builder /app/gadget-lab-api/dist ./gadget-lab-api/dist
 COPY gadget-lab-api/package.json ./gadget-lab-api/
+COPY gadget-lab-api/prisma ./gadget-lab-api/prisma
 WORKDIR /app/gadget-lab-api
 EXPOSE 3001
 CMD ["node", "dist/index.js"]
